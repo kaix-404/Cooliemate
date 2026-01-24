@@ -152,11 +152,11 @@ const Footer = () => {
             <div className="space-y-4">
               <div className="flex items-start gap-3 text-gray-300 hover:text-yellow-400 transition-colors group">
                 <Mail size={18} className="mt-1 flex-shrink-0" />
-                <a href="mailto:orugantinavadeep.com" className="text-sm">orugantinavadeep@gmail.com</a>
+                <a href="mailto:kairavnandi@gmail.com" className="text-sm">kairavnandi@gmail.com</a>
               </div>
               <div className="flex items-start gap-3 text-gray-300 hover:text-yellow-400 transition-colors group">
                 <Phone size={18} className="mt-1 flex-shrink-0" />
-                <span className="text-sm">+91 9494704280</span>
+                <span className="text-sm">+91 7003938206</span>
               </div>
               <div className="flex items-start gap-3 text-gray-300 hover:text-yellow-400 transition-colors group">
                 <MapPin size={18} className="mt-1 flex-shrink-0" />
