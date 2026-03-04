@@ -115,6 +115,7 @@ const BookPorter = () => {
     numberOfBags: "",
     weight: "",
     notes: "",
+    arrivalTime: "",
     isLateNight: false,
     isPriority: false,
   });
@@ -223,7 +224,6 @@ const BookPorter = () => {
     if (
       !formData.fullName ||
       !formData.phone ||
-      !formData.pnr ||
       !formData.station ||
       !formData.numberOfBags ||
       !formData.weight
@@ -263,7 +263,7 @@ const BookPorter = () => {
         destinationStation: pnrInfo?.destinationStation || null,
         destinationStationCode: pnrInfo?.destinationStationCode || null,
         dateOfJourney: pnrInfo?.dateOfJourney || null,
-        arrivalTime: pnrInfo?.arrivalTime || null,
+        arrivalTime: pnrInfo?.arrivalTime || formData.arrivalTime,
       },
       luggageDetails: {
         numberOfBags: parseInt(formData.numberOfBags),
@@ -422,7 +422,6 @@ const BookPorter = () => {
                         placeholder="10 digit PNR (try: 1234567890)"
                         maxLength={10}
                         className="h-10 sm:h-12 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 transition-all flex-1 text-sm sm:text-base"
-                        required
                       />
                       <Button
                         type="button"
@@ -543,6 +542,26 @@ const BookPorter = () => {
                     />
                     <p className="text-xs text-gray-500">
                       Enter the station where you need porter service
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 sm:space-y-3">
+                    <Label htmlFor="station" className="text-xs sm:text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                      Time of Arrival *
+                    </Label>
+                    <Input
+                      id="arrivalTime"
+                      value={formData.arrivalTime}
+                      onChange={(e) =>
+                        setFormData({ ...formData, arrivalTime: e.target.value })
+                      }
+                      placeholder="e.g., 12:00 PM"
+                      className="h-10 sm:h-12 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 transition-all text-sm sm:text-base"
+                      required
+                    />
+                    <p className="text-xs text-gray-500">
+                      Enter the time of arrival at the station
                     </p>
                   </div>
                 </motion.div>
