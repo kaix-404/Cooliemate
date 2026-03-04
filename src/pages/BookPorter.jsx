@@ -547,7 +547,6 @@ const BookPorter = () => {
 
                   <div className="space-y-2 sm:space-y-3">
                     <Label htmlFor="station" className="text-xs sm:text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
                       Time of Arrival *
                     </Label>
                     <Input
