@@ -245,15 +245,6 @@ const BookPorter = () => {
       return;
     }
 
-    if (!pnrInfo) {
-      playSound('form-error');
-      sonnerToast.error('PNR Not Verified', {
-        description: 'Please verify your PNR before proceeding',
-        duration: 4000,
-      });
-      return;
-    }
-
     setLoading(true);
 
     const bookingData = {
@@ -262,17 +253,17 @@ const BookPorter = () => {
         phone: formData.phone,
       },
       travelDetails: {
-        pnr: formData.pnr,
+        pnr: formData.pnr || null,
         station: formData.station,
-        trainNo: pnrInfo.trainNo,
-        trainName: pnrInfo.trainName,
-        coachNo: pnrInfo.coachNo,
-        boardingStation: pnrInfo.boardingStation,
-        boardingStationCode: pnrInfo.boardingStationCode,
-        destinationStation: pnrInfo.destinationStation,
-        destinationStationCode: pnrInfo.destinationStationCode,
-        dateOfJourney: pnrInfo.dateOfJourney,
-        arrivalTime: pnrInfo.arrivalTime,
+        trainNo: pnrInfo?.trainNo || null,
+        trainName: pnrInfo?.trainName || null,
+        coachNo: pnrInfo?.coachNo || null,
+        boardingStation: pnrInfo?.boardingStation || null,
+        boardingStationCode: pnrInfo?.boardingStationCode || null,
+        destinationStation: pnrInfo?.destinationStation || null,
+        destinationStationCode: pnrInfo?.destinationStationCode || null,
+        dateOfJourney: pnrInfo?.dateOfJourney || null,
+        arrivalTime: pnrInfo?.arrivalTime || null,
       },
       luggageDetails: {
         numberOfBags: parseInt(formData.numberOfBags),
@@ -416,7 +407,7 @@ const BookPorter = () => {
                   
                   <div className="space-y-2 sm:space-y-3">
                     <Label htmlFor="pnr" className="text-xs sm:text-sm font-semibold text-gray-700">
-                      PNR Number *
+                      Enter PNR Number if available
                     </Label>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Input
@@ -727,7 +718,7 @@ const BookPorter = () => {
                   <Button
                     type="submit"
                     className="w-full h-12 sm:h-14 text-base sm:text-lg font-bold rounded-xl sm:rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-300 hover:scale-[1.02] group"
-                    disabled={loading || !pnrInfo}
+                    disabled={loading}
                   >
                     {loading ? (
                       <>
