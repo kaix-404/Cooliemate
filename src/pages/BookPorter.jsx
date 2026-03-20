@@ -111,6 +111,7 @@ const BookPorter = () => {
     fullName: "",
     phone: "",
     pnr: "",
+    trainNumber: "",
     station: "Kurnool Station",
     numberOfBags: "",
     weight: "",
@@ -124,11 +125,10 @@ const BookPorter = () => {
   const [pricing, setPricing] = useState(null);
   const [pnrLoading, setPnrLoading] = useState(false);
 
-  const handlePNRLookup = async () => {
-    if (formData.pnr.length !== 10) {
+  const handleLookup = async () => {
+    if (!formData.pnr && !formData.trainNumber) {
       playSound('pnr-error');
-      sonnerToast.error('Invalid PNR', {
-        description: 'PNR number must be 10 digits',
+      sonnerToast.error('Enter PNR or Train Number', {
         duration: 4000,
       });
       return;
@@ -137,73 +137,80 @@ const BookPorter = () => {
     setPnrLoading(true);
 
     try {
-      const response = await axios.get(
-        `https://irctc-indian-railway-pnr-status.p.rapidapi.com/getPNRStatus/${formData.pnr}`,
-        {
-          headers: {
-            "X-RapidAPI-Key":
-              "0c70d5aad3msh2c30b36563f687dp120041jsnb56d94f808b9",
-            "X-RapidAPI-Host": "irctc-indian-railway-pnr-status.p.rapidapi.com",
+      let response 
+      if (formData.pnr) {
+        response = await axios.get(
+          `https://irctc-indian-railway-pnr-status.p.rapidapi.com/getPNRStatus/${formData.pnr}`,
+          {
+            headers: {
+              "X-RapidAPI-Key":
+                "0c70d5aad3msh2c30b36563f687dp120041jsnb56d94f808b9",
+              "X-RapidAPI-Host": "irctc-indian-railway-pnr-status.p.rapidapi.com",
+            },
+          }
+        );
+      } else {
+        response = {
+          data: {
+            trainNo: formData.trainNumber,
+            trainName: "Demo Express",
+            from: "Origin",
+            to: "Destination",
+            date: "N/A",
+            arrival: "N/A",
           },
-        }
-      );
-
-      const data = response.data;
-
-      if (data.success && data.data) {
-        const pnrData = data.data;
-        const info = {
-          trainNo: pnrData.trainNumber || pnrData.train_number || "",
-          trainName: pnrData.trainName || pnrData.train_name || "",
-          coachNo:
-            pnrData.passengers?.[0]?.coach ||
-            pnrData.passengers?.[0]?.currentCoach ||
-            "",
-          destinationStation:
-            pnrData.destinationStation || pnrData.to_station || "",
-          destinationStationCode:
-            pnrData.to || pnrData.destinationStationCode || "",
-          arrivalTime: pnrData.arrivalTime || pnrData.arrival_time || "",
-          boardingStation: pnrData.boardingPoint || pnrData.from_station || "",
-          boardingStationCode:
-            pnrData.from || pnrData.boardingStationCode || "",
-          dateOfJourney: pnrData.dateOfJourney || pnrData.doj || "",
         };
+      }
+      const data = response.data.data || response.data;
+
+      const info = {
+        trainNo: data.trainNumber || data.trainNo || formData.trainNumber,
+        trainName: data.trainName || "",
+        coachNo: data.passengers?.[0]?.coach || "",
+        destinationStation: data.destinationStation || data.to || "",
+        destinationStationCode: data.to || "",
+        arrivalTime: data.arrivalTime || data.arrival || "",
+        boardingStation: data.boardingPoint || data.from || "",
+        boardingStationCode: data.from || "",
+        dateOfJourney: data.dateOfJourney || data.date || "",
+      };
 
         setPnrInfo(info);
         playSound('pnr-success');
-        sonnerToast.success('PNR Verified Successfully! ✓', {
+        sonnerToast.success('Details fetched Successfully! ✓', {
           description: `Train ${info.trainNo} - ${info.trainName}`,
           duration: 5000,
         });
-      } else {
-        throw new Error("Invalid PNR or no data found");
-      }
     } catch (error) {
-      console.error("PNR lookup error:", error);
-
-      const info = mockPNRData[formData.pnr];
-      if (info) {
-        setPnrInfo(info);
-        playSound('pnr-success');
-        sonnerToast.success('PNR Verified Successfully! ✓', {
-          description: `Train ${info.trainNo} - ${info.trainName} (Demo Mode)`,
-          duration: 5000,
-        });
-      } else {
-        const errorMessage = axios.isAxiosError(error)
-          ? error.response?.data?.message || error.message
-          : "Unknown error occurred";
-
-        playSound('pnr-error');
-        sonnerToast.error('PNR Verification Failed', {
-          description: `Error: ${errorMessage}. For demo, try: 1234567890`,
-          duration: 6000,
-        });
-      }
+      playSound('pnr-error');
+      sonnerToast.error("Lookup failed");
     } finally {
       setPnrLoading(false);
     }
+    // } catch (error) {
+    //   console.error("PNR lookup error:", error);
+
+    //   const info = mockPNRData[formData.pnr];
+    //   if (info) {
+    //     setPnrInfo(info);
+    //     playSound('pnr-success');
+    //     sonnerToast.success('PNR Verified Successfully! ✓', {
+    //       description: `Train ${info.trainNo} - ${info.trainName} (Demo Mode)`,
+    //       duration: 5000,
+    //     });
+    //   } else {
+    //     const errorMessage = axios.isAxiosError(error)
+    //       ? error.response?.data?.message || error.message
+    //       : "Unknown error occurred";
+
+    //     playSound('pnr-error');
+    //     sonnerToast.error('PNR Verification Failed', {
+    //       description: `Error: ${errorMessage}. For demo, try: 1234567890`,
+    //       duration: 6000,
+    //     });
+    //   }
+    // } finally {
+    //   setPnrLoading(false);
   };
 
   const handleCalculatePrice = (updatedData = formData) => {
@@ -255,7 +262,7 @@ const BookPorter = () => {
       travelDetails: {
         pnr: formData.pnr || null,
         station: formData.station,
-        trainNo: pnrInfo?.trainNo || null,
+        trainNo: pnrInfo?.trainNo || formData.trainNumber || null,
         trainName: pnrInfo?.trainName || null,
         coachNo: pnrInfo?.coachNo || null,
         boardingStation: pnrInfo?.boardingStation || null,
@@ -411,23 +418,39 @@ const BookPorter = () => {
                     </Label>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Input
-                        id="pnr"
-                        value={formData.pnr}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            pnr: e.target.value.replace(/\D/g, "").slice(0, 10),
-                          })
-                        }
-                        placeholder="10 digit PNR (try: 1234567890)"
+                        value={formData.pnr || formData.trainNumber}
                         maxLength={10}
-                        className="h-10 sm:h-12 rounded-lg sm:rounded-xl border-2 border-gray-200 focus:border-blue-500 transition-all flex-1 text-sm sm:text-base"
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "");
+
+                          if (value.length === 10) {
+                            // Assume PNR
+                            setFormData({
+                              ...formData,
+                              pnr: value,
+                              trainNumber: "",
+                            });
+                          } else if (value.length === 5) {
+                            // Assume Train Number
+                            setFormData({
+                              ...formData,
+                              trainNumber: value,
+                              pnr: "",
+                            });
+                          }
+                        }}
+                        placeholder="Enter PNR (10 digits) or Train Number"
                       />
                       <Button
                         type="button"
-                        onClick={handlePNRLookup}
+                        onClick={handleLookup}
                         className="h-10 sm:h-12 px-6 sm:px-8 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold shadow-lg hover:shadow-xl transition-all text-sm sm:text-base w-full sm:w-auto"
-                        disabled={pnrLoading || formData.pnr.length !== 10}
+                        disabled={pnrLoading || 
+                          !(
+                            formData.pnr.length === 10 || 
+                            formData.trainNumber.length === 5
+                          )
+                        }
                       >
                         {pnrLoading ? (
                           <>
@@ -435,7 +458,7 @@ const BookPorter = () => {
                             Verifying...
                           </>
                         ) : (
-                          "Verify PNR"
+                          formData.pnr.length === 10 ? "Verify PNR" : "Lookup Train"
                         )}
                       </Button>
                     </div>
