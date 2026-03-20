@@ -124,6 +124,7 @@ const BookPorter = () => {
   const [pnrInfo, setPnrInfo] = useState(null);
   const [pricing, setPricing] = useState(null);
   const [pnrLoading, setPnrLoading] = useState(false);
+  const [inputValue, setInputValue] = useState("");
 
   const handleLookup = async () => {
     if (!formData.pnr && !formData.trainNumber) {
@@ -418,10 +419,11 @@ const BookPorter = () => {
                     </Label>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Input
-                        value={formData.pnr || formData.trainNumber}
+                        value={inputValue}
                         maxLength={10}
                         onChange={(e) => {
                           const value = e.target.value.replace(/\D/g, "");
+                          setInputValue(value);
 
                           if (value.length === 10) {
                             // Assume PNR
@@ -447,8 +449,8 @@ const BookPorter = () => {
                         className="h-10 sm:h-12 px-6 sm:px-8 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold shadow-lg hover:shadow-xl transition-all text-sm sm:text-base w-full sm:w-auto"
                         disabled={pnrLoading || 
                           !(
-                            formData.pnr.length === 10 || 
-                            formData.trainNumber.length === 5
+                            inputValue.length === 10 || 
+                            inputValue.length === 5
                           )
                         }
                       >
@@ -458,7 +460,7 @@ const BookPorter = () => {
                             Verifying...
                           </>
                         ) : (
-                          formData.pnr.length === 10 ? "Verify PNR" : "Lookup Train"
+                          inputValue.length === 10 ? "Verify PNR" : "Lookup Train"
                         )}
                       </Button>
                     </div>
