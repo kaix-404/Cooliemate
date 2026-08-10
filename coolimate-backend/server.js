@@ -24,7 +24,10 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.ADMIN_EMAIL,
     pass: process.env.ADMIN_EMAIL_PASSWORD
-  }
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000
 });
 
 // Verify email configuration
@@ -971,12 +974,14 @@ app.post('/api/bookings', async (req, res) => {
     const booking = new Booking(bookingData);
     await booking.save();
 
-    // Send email notification to admin
+    // Send email notification to admin (non-blocking - must not delay the booking response)
     const emailData = {
       bookingId: booking._id.toString(),
       ...bookingData
     };
-    await sendBookingNotificationEmail(emailData, porter);
+    sendBookingNotificationEmail(emailData, porter).catch((error) => {
+      console.error('❌ Email notification failed:', error);
+    });
 
     // Track booking analytics
     if (req.visitorInfo) {

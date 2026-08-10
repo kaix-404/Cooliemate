@@ -9,7 +9,7 @@ const Footer = () => {
       { name: "About Us", path: "/about" },
       { name: "Book a Porter", path: "/book" },
       { name: "Coolie Login", path: "/porter-login" },
-      // { name: "Admin Login", path: "/admin-login" },
+      { name: "Admin Login", path: "/porter-login" },
     ],
     // services: [
     //   { name: "Pricing", path: "/pricing" },
