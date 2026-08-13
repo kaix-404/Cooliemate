@@ -840,6 +840,7 @@ const Home = () => {
                 <Button
                   size="lg"
                   variant="outline"
+                  onClick={() => setShowNotification(true)}
                   className="font-semibold text-base px-10 sm:px-12 py-6 bg-transparent border-2 border-white text-white hover:bg-white/10 rounded-lg w-full sm:w-auto"
                 >
                   Download App

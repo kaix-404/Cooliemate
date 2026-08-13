@@ -423,6 +423,10 @@ const AboutUs = () => {
                           src={member.img}
                           alt={member.name}
                           className="w-32 h-32 rounded-full mx-auto mb-4 object-cover shadow-xl border-4 border-white/20"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'%3E%3Crect fill='%234f46e5' width='128' height='128'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='48' fill='%23fff'%3E${member.name.charAt(0)}%3C/text%3E%3C/svg%3E`;
+                          }}
                         />
                         <h3 className="font-bold text-xl mb-2 text-white">{member.name}</h3>
                         <Badge className="mb-4 bg-white/20 text-white border-white/30">

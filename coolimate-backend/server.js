@@ -829,7 +829,7 @@ app.get('/api/porters/available', async (req, res) => {
         _id: porter._id.toString(),
         mongoId: porter._id.toString(),
         name: porter.name,
-        photo: `${req.protocol}://${req.get('host')}/uploads/${porter.image}`,
+        photo: `https://${req.get('host')}/uploads/${porter.image}`,
         station: porter.station,
         rating: porter.rating,
         totalTrips: porter.totalTrips,

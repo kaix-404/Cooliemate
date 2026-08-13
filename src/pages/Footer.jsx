@@ -16,10 +16,6 @@ const Footer = () => {
     //   { name: "FAQ", path: "/faq" },
     //   { name: "Support", path: "/support" },
     // ],
-    legal: [
-      { name: "Privacy Policy", path: "/privacy-policy" },
-      { name: "Terms of Service", path: "/terms" },
-    ],
   };
 
   return (
@@ -184,18 +180,6 @@ const Footer = () => {
             <p className="text-gray-500 text-xs mt-1">
               Part of the <span className="text-yellow-400">Digital India Initiative</span>
             </p>
-          </div>
-
-          <div className="flex gap-6 text-sm">
-            {footerLinks.legal.map((link) => (
-              <Link 
-                key={link.path}
-                to={link.path} 
-                className="text-gray-400 hover:text-yellow-400 transition-colors"
-              >
-                {link.name}
-              </Link>
-            ))}
           </div>
         </motion.div>
       </div>
