@@ -81,9 +81,14 @@ const AvailablePorters = () => {
     const fetchAvailablePorters = async () => {
       try {
         setLoadingPorters(true);
-        const url = `${API_BASE}/api/porters/available`;
+        const station = bookingData.travelDetails?.station;
+        const params = new URLSearchParams();
+        if (station) {
+          params.set('station', station);
+        }
+        const url = `${API_BASE}/api/porters/available${params.toString() ? `?${params.toString()}` : ''}`;
         
-        console.log('🔍 Fetching all available porters from:', url);
+        console.log('🔍 Fetching available porters from:', url);
         
         const response = await fetch(url);
         
@@ -95,6 +100,20 @@ const AvailablePorters = () => {
         console.log('📦 Available porters:', data);
         
         if (data.success && data.data) {
+          if (data.data.length === 0 && station) {
+            const fallbackResponse = await fetch(`${API_BASE}/api/porters/available`);
+            const fallbackData = await fallbackResponse.json();
+            if (fallbackData.success && fallbackData.data) {
+              setPorters(fallbackData.data);
+              if (fallbackData.data.length === 0) {
+                toast({
+                  title: "No Porters Available",
+                  description: "No porters are currently online",
+                });
+              }
+              return;
+            }
+          }
           setPorters(data.data);
           if (data.data.length === 0) {
             toast({

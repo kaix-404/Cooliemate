@@ -26,6 +26,25 @@ import {
 
 const API_BASE = 'https://cooliemate.onrender.com';
 
+const getAdminHeaders = () => {
+  const token = localStorage.getItem('adminToken');
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+};
+
+const handleUnauthorized = (response) => {
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminPhone');
+    alert('Admin session expired. Please log in again.');
+    window.location.href = '/porter-login';
+    return true;
+  }
+  return false;
+};
+
 // Analytics tracking utility
 const trackAnalytics = async (action = 'visit', page = window.location.pathname) => {
   try {
@@ -70,8 +89,12 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`${API_BASE}/api/analytics/dashboard`);
+      const response = await fetch(`${API_BASE}/api/analytics/dashboard`, {
+        headers: getAdminHeaders()
+      });
       const data = await response.json();
+      
+      if (handleUnauthorized(response)) return;
       
       if (data.success) {
         setAnalytics(data.data);
@@ -89,8 +112,12 @@ const AdminDashboard = () => {
   const fetchPorters = async () => {
     try {
       setPortersLoading(true);
-      const response = await fetch(`${API_BASE}/api/porters/debug`);
+      const response = await fetch(`${API_BASE}/api/porters/debug`, {
+        headers: getAdminHeaders()
+      });
       const data = await response.json();
+      
+      if (handleUnauthorized(response)) return;
       
       if (data.success) {
         setPorters(data.porters);
@@ -120,10 +147,12 @@ const AdminDashboard = () => {
 
       const response = await fetch(`${API_BASE}/api/admin/porter/${porterId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: getAdminHeaders()
       });
       
       const data = await response.json();
+      
+      if (handleUnauthorized(response)) return;
       
       if (data.success) {
         setPorters(porters.filter(p => p._id !== porterId));

@@ -141,13 +141,9 @@ const BookPorter = () => {
       let response 
       if (formData.pnr) {
         response = await axios.get(
-          `https://irctc-indian-railway-pnr-status.p.rapidapi.com/getPNRStatus/${formData.pnr}`,
+          `https://cooliemate.onrender.com/api/pnr`,
           {
-            headers: {
-              "X-RapidAPI-Key":
-                "0c70d5aad3msh2c30b36563f687dp120041jsnb56d94f808b9",
-              "X-RapidAPI-Host": "irctc-indian-railway-pnr-status.p.rapidapi.com",
-            },
+            params: { pnr: formData.pnr }
           }
         );
       } else {

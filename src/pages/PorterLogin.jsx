@@ -150,19 +150,6 @@ const PorterLogin = () => {
     e.preventDefault();
     const { phone, password } = credentials;
 
-    // Check for admin login
-    if (phone === "9494704280" && password === "CooliemateDN") {
-      showToastWithSound({
-        title: "Admin Login Successful",
-        description: "Welcome to Admin Dashboard!",
-        variant: "success",
-      });
-      setTimeout(() => {
-        navigate("/admin-dashboard");
-      }, 1000);
-      return;
-    }
-
     // Validation
     if (!phone || !password) {
       showToastWithSound({
@@ -183,6 +170,35 @@ const PorterLogin = () => {
     }
 
     setIsSubmitting(true);
+
+    // Try admin login first - falls through to porter login if the credentials are not admin
+    try {
+      const adminResponse = await fetch(`${API_BASE}/api/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone, password })
+      });
+
+      if (adminResponse.ok) {
+        const adminData = await adminResponse.json();
+        localStorage.setItem('adminToken', adminData.token);
+        localStorage.setItem('adminPhone', phone);
+
+        showToastWithSound({
+          title: "Admin Login Successful",
+          description: "Welcome to Admin Dashboard!",
+          variant: "success",
+        });
+        setTimeout(() => {
+          navigate("/admin-dashboard");
+        }, 1000);
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Admin login check failed:', error);
+    }
 
     try {
       console.log('📤 Attempting login with mobile number:', phone);

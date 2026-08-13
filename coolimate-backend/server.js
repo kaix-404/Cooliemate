@@ -7,9 +7,15 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
+
+const jwtSecret = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️ JWT_SECRET not set - using a random secret. Tokens are invalidated on every server restart. Set JWT_SECRET in your environment variables.');
+}
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -33,7 +39,10 @@ const transporter = nodemailer.createTransport({
 // Verify email configuration
 transporter.verify((error, success) => {
   if (error) {
-    console.error('❌ Email Configuration Error:', error);
+    console.error('❌ Email Configuration Error:', error.message);
+    if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_EMAIL_PASSWORD) {
+      console.warn('⚠️ ADMIN_EMAIL / ADMIN_EMAIL_PASSWORD are not set. Booking notification emails are disabled.');
+    }
   } else {
     console.log('✅ Email Service Ready');
   }
@@ -328,14 +337,13 @@ function detectDevice(userAgent) {
 }
 
 function generateVisitorId(ip, userAgent) {
-  const crypto = require('crypto');
   return crypto.createHash('md5').update(ip + userAgent).digest('hex');
 }
 
 // ==================== MIDDLEWARE ====================
 
 app.use(async (req, res, next) => {
-  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/analytics/track')) {
+  if (req.path.startsWith('/api/') && !req.path.startsWith('/api/analytics/')) {
     return next();
   }
 
@@ -392,7 +400,7 @@ function authenticateToken(req, res, next) {
     });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, porter) => {
+  jwt.verify(token, jwtSecret, (err, porter) => {
     if (err) {
       return res.status(403).json({
         success: false,
@@ -404,10 +412,255 @@ function authenticateToken(req, res, next) {
   });
 }
 
+function authenticateAdmin(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access token required'
+    });
+  }
+
+  jwt.verify(token, jwtSecret, (err, payload) => {
+    if (err || payload.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid or expired admin token'
+      });
+    }
+    req.admin = payload;
+    next();
+  });
+}
+
+function authenticateLookup(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access token required'
+    });
+  }
+
+  jwt.verify(token, jwtSecret, (err, payload) => {
+    if (err || payload.purpose !== 'bookings_lookup') {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid or expired verification token'
+      });
+    }
+    if (payload.phone !== req.params.phone) {
+      return res.status(403).json({
+        success: false,
+        message: 'Verification token does not match this phone number'
+      });
+    }
+    req.lookup = payload;
+    next();
+  });
+}
+
+// ==================== OTP (BOOKINGS LOOKUP VERIFICATION) ====================
+
+const otpStore = new Map();
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+app.post('/api/otp/request', async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!/^[0-9]{10}$/.test(phone || '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 10-digit mobile number'
+      });
+    }
+
+    const existing = otpStore.get(phone);
+    if (existing && Date.now() - existing.requestedAt < 60 * 1000) {
+      return res.status(429).json({
+        success: false,
+        message: 'Please wait a minute before requesting another OTP'
+      });
+    }
+
+    const otp = generateOtp();
+    otpStore.set(phone, { otp, requestedAt: Date.now(), attempts: 0 });
+
+    console.log(`🔐 OTP for ${phone}: ${otp} (valid for 5 minutes)`);
+
+    res.json({
+      success: true,
+      message: 'OTP sent to your mobile number',
+      ...(process.env.NODE_ENV !== 'production' ? { debugOtp: otp } : {})
+    });
+  } catch (error) {
+    console.error('❌ OTP request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/otp/verify', (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!/^[0-9]{10}$/.test(phone || '') || !/^[0-9]{6}$/.test(otp || '')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number or OTP format'
+      });
+    }
+
+    const entry = otpStore.get(phone);
+    if (!entry) {
+      return res.status(400).json({
+        success: false,
+        message: 'No OTP requested for this number yet'
+      });
+    }
+
+    if (Date.now() - entry.requestedAt > 5 * 60 * 1000) {
+      otpStore.delete(phone);
+      return res.status(400).json({
+        success: false,
+        message: 'OTP has expired. Please request a new one.'
+      });
+    }
+
+    entry.attempts += 1;
+    if (entry.attempts > 5) {
+      otpStore.delete(phone);
+      return res.status(429).json({
+        success: false,
+        message: 'Too many incorrect attempts. Please request a new OTP.'
+      });
+    }
+
+    if (entry.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Incorrect OTP. Please try again.'
+      });
+    }
+
+    otpStore.delete(phone);
+
+    const token = jwt.sign(
+      { phone, purpose: 'bookings_lookup' },
+      jwtSecret,
+      { expiresIn: '15m' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Phone number verified',
+      token
+    });
+  } catch (error) {
+    console.error('❌ OTP verify error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
 // ==================== ROUTES ====================
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
+});
+
+app.post('/api/admin/login', (req, res) => {
+  try {
+    const { phone, password } = req.body;
+
+    const adminPhone = process.env.ADMIN_PHONE || '9494704280';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'CooliemateDN';
+
+    if (!process.env.ADMIN_PHONE || !process.env.ADMIN_PASSWORD) {
+      console.warn('⚠️ ADMIN_PHONE / ADMIN_PASSWORD not set - falling back to default admin credentials. Set them in your environment variables.');
+    }
+
+    if (phone !== adminPhone || password !== adminPassword) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid admin credentials'
+      });
+    }
+
+    const token = jwt.sign(
+      { role: 'admin', phone: adminPhone },
+      jwtSecret,
+      { expiresIn: '12h' }
+    );
+
+    console.log('✅ Admin login successful');
+
+    res.json({
+      success: true,
+      message: 'Admin login successful',
+      token
+    });
+  } catch (error) {
+    console.error('❌ Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/pnr', async (req, res) => {
+  try {
+    const { pnr } = req.query;
+
+    if (!pnr || typeof pnr !== 'string' || !/^[A-Za-z0-9]{10}$/.test(pnr)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid PNR. Must be 10 alphanumeric characters.'
+      });
+    }
+
+    const apiKey = process.env.RAPIDAPI_KEY || '0c70d5aad3msh2c30b36563f687dp120041jsnb56d94f808b9';
+
+    const apiResponse = await fetch(
+      `https://irctc-indian-railway-pnr-status.p.rapidapi.com/getPNRStatus/${pnr}`,
+      {
+        headers: {
+          'X-RapidAPI-Key': apiKey,
+          'X-RapidAPI-Host': 'irctc-indian-railway-pnr-status.p.rapidapi.com'
+        }
+      }
+    );
+
+    const data = await apiResponse.json();
+
+    res.status(apiResponse.ok ? 200 : 502).json({
+      success: apiResponse.ok,
+      ...(apiResponse.ok ? { data } : { message: 'PNR lookup failed', ...data })
+    });
+  } catch (error) {
+    console.error('❌ PNR lookup error:', error);
+    res.status(502).json({
+      success: false,
+      message: 'PNR lookup failed',
+      error: error.message
+    });
+  }
 });
 
 app.post('/api/analytics/track', async (req, res) => {
@@ -440,12 +693,43 @@ app.post('/api/analytics/track', async (req, res) => {
   }
 });
 
-app.get('/api/analytics/dashboard', async (req, res) => {
+app.post('/api/analytics/visit', async (req, res) => {
+  try {
+    const { page, sessionId } = req.body;
+    const { visitorId, ipAddress, userAgent, device } = req.visitorInfo || {};
+
+    if (!visitorId) {
+      return res.status(400).json({ success: false, message: 'Visitor info missing' });
+    }
+
+    const analyticsEntry = new Analytics({
+      visitorId,
+      ipAddress,
+      userAgent,
+      device,
+      page: page || '/',
+      referrer: req.headers.referer || '',
+      action: 'visit',
+      sessionId: sessionId || visitorId,
+      timestamp: new Date()
+    });
+
+    await analyticsEntry.save();
+    res.json({ success: true, message: 'Visit tracked' });
+  } catch (error) {
+    console.error('Visit tracking error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get('/api/analytics/dashboard', authenticateAdmin, async (req, res) => {
   try {
     console.log('📊 Fetching real analytics data...');
     
     const totalVisits = await Analytics.countDocuments({ action: 'visit' });
+    const pageViews = await Analytics.countDocuments({ action: 'visit', page: { $ne: '/api/' } });
     const uniqueVisitors = await Analytics.distinct('visitorId');
+    const sessions = await Analytics.distinct('sessionId', { action: 'visit' });
     const totalBookings = await Booking.countDocuments();
     const conversionRate = uniqueVisitors.length > 0 
       ? ((totalBookings / uniqueVisitors.length) * 100).toFixed(1) + '%'
@@ -502,6 +786,8 @@ app.get('/api/analytics/dashboard', async (req, res) => {
     const analytics = {
       overview: {
         totalVisits: totalVisits,
+        pageViews: pageViews,
+        sessions: sessions.length,
         uniqueVisitors: uniqueVisitors.length,
         totalBookings: totalBookings,
         conversionRate: conversionRate,
@@ -543,7 +829,7 @@ app.get('/api/analytics/dashboard', async (req, res) => {
   }
 });
 
-app.get('/api/porter/debug/:identifier', async (req, res) => {
+app.get('/api/porter/debug/:identifier', authenticateAdmin, async (req, res) => {
   try {
     const { identifier } = req.params;
     
@@ -575,7 +861,7 @@ app.get('/api/porter/debug/:identifier', async (req, res) => {
   }
 });
 
-app.get('/api/porters/debug', async (req, res) => {
+app.get('/api/porters/debug', authenticateAdmin, async (req, res) => {
   try {
     const allPorters = await Porter.find({})
       .select('name phone badgeNumber station isOnline isVerified lastSeen')
@@ -653,7 +939,7 @@ app.post('/api/porter/register', upload.single('image'), async (req, res) => {
 
     const token = jwt.sign(
       { id: porter._id, badgeNumber: porter.badgeNumber },
-      process.env.JWT_SECRET || 'your-secret-key',
+      jwtSecret,
       { expiresIn: '7d' }
     );
 
@@ -740,7 +1026,7 @@ app.post('/api/porter/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: porter._id, badgeNumber: porter.badgeNumber },
-      process.env.JWT_SECRET || 'your-secret-key',
+      jwtSecret,
       { expiresIn: '7d' }
     );
 
@@ -1080,7 +1366,7 @@ app.get('/api/porter/:porterId/bookings', authenticateToken, async (req, res) =>
   }
 });
 
-app.get('/api/bookings/phone/:phone', async (req, res) => {
+app.get('/api/bookings/phone/:phone', authenticateLookup, async (req, res) => {
   try {
     const { phone } = req.params;
     
@@ -1209,7 +1495,7 @@ app.post('/api/reviews', async (req, res) => {
   }
 });
 
-app.delete('/api/admin/porter/:id', async (req, res) => {
+app.delete('/api/admin/porter/:id', authenticateAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     

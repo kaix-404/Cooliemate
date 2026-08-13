@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Environment files (contain secrets - use platform env vars instead)
+.env
+coolimate-backend/.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
