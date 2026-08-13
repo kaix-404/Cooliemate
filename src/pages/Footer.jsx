@@ -64,14 +64,14 @@ const Footer = () => {
             <div className="flex gap-3">
               <motion.a
                 whileHover={{ scale: 1.1, y: -2 }}
-                href="mailto:orugantinavadeep@gmail.com"
+                href="mailto:kairavnandi@gmail.com"
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center hover:shadow-lg hover:shadow-red-500/50 transition-all"
               >
                 <Mail size={18} />
               </motion.a>
               <motion.a
                 whileHover={{ scale: 1.1, y: -2 }}
-                href="tel:+919494704280"
+                href="tel:+917003938206"
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center hover:shadow-lg hover:shadow-red-500/50 transition-all"
               >
                 <Phone size={18} />
