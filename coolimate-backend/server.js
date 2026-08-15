@@ -587,8 +587,8 @@ app.post('/api/admin/login', (req, res) => {
   try {
     const { phone, password } = req.body;
 
-    const adminPhone = process.env.ADMIN_PHONE || '9494704280';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'CooliemateDN';
+    const adminPhone = process.env.ADMIN_PHONE;
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (!process.env.ADMIN_PHONE || !process.env.ADMIN_PASSWORD) {
       console.warn('⚠️ ADMIN_PHONE / ADMIN_PASSWORD not set - falling back to default admin credentials. Set them in your environment variables.');
