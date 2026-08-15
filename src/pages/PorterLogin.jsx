@@ -9,7 +9,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "../pages/Footer";
 import { Eye, EyeOff, Loader2, User, Lock, Sparkles, Phone, CheckCircle, XCircle } from "lucide-react";
 
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 // Audio notification system using Web Audio API
 const useAudioNotification = () => {

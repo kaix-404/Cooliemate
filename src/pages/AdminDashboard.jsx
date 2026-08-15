@@ -24,7 +24,7 @@ import {
   AlertCircle
 } from "lucide-react";
 
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const getAdminHeaders = () => {
   const token = localStorage.getItem('adminToken');

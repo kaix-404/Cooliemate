@@ -18,7 +18,7 @@ import ProfessionalLoadingScreen from "@/components/ProfessionalLoadingScreen";
 
 const queryClient = new QueryClient();
 
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const ServerWakeBanner = () => {
   const [waking, setWaking] = useState(false);

@@ -28,7 +28,7 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/pages/Footer";
 
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const PorterDashboard = () => {
   const navigate = useNavigate();

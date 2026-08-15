@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/pages/Footer";
 
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const PorterRegistration = () => {
   const navigate = useNavigate();

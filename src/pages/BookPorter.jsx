@@ -141,7 +141,7 @@ const BookPorter = () => {
       let response 
       if (formData.pnr) {
         response = await axios.get(
-          `https://cooliemate.onrender.com/api/pnr`,
+          `https://cooliemate-v2.onrender.com/api/pnr`,
           {
             params: { pnr: formData.pnr }
           }

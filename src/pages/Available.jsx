@@ -23,7 +23,7 @@ import {
   Sparkles
 } from "lucide-react";
 
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const AvailablePorters = () => {
   const [bookingData, setBookingData] = useState(null);

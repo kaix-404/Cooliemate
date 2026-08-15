@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Phone, Search, Package, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
-const API_BASE = 'https://cooliemate.onrender.com';
+const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const MyBookings = () => {
   const { toast } = useToast();
