@@ -195,14 +195,19 @@ async function sendBookingNotificationEmail(bookingData, porter) {
 
 // Middleware - UPDATED CORS CONFIGURATION
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://cooliemate-etak.vercel.app',
-    'https://www.cooliemate.in',
-    'https://cooliemate.in'
-  ],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const allowed = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://cooliemate-etak.vercel.app',
+      'https://www.cooliemate.in',
+      'https://cooliemate.in'
+    ].includes(origin) || /^https:\/\/[\w-]+\.vercel\.app$/.test(origin);
+    if (allowed) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
