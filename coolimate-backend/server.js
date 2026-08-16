@@ -234,7 +234,7 @@ const porterSchema = new mongoose.Schema({
   badgeNumber: { type: String, required: true, unique: true, trim: true },
   station: { type: String, required: true, default: 'Kurnool Station' },
   password: { type: String, required: true, minlength: 6 },
-  image: { type: String, required: true },
+  image: { type: String, default: '' },
   isVerified: { type: Boolean, default: true },
   isOnline: { type: Boolean, default: false },
   lastSeen: { type: Date, default: Date.now },
