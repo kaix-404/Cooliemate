@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Users,
   TrendingUp,
@@ -21,7 +23,10 @@ import {
   Phone,
   Hash,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  Upload,
+  Loader2
 } from "lucide-react";
 
 const API_BASE = 'https://cooliemate-v2.onrender.com';
@@ -76,6 +81,15 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('analytics');
   const [deletingId, setDeletingId] = useState(null);
   const [error, setError] = useState(null);
+  const [newPorter, setNewPorter] = useState({
+    name: "",
+    phone: "",
+    badgeNumber: "",
+    station: "Kurnool Station",
+    password: "",
+  });
+  const [newPorterImage, setNewPorterImage] = useState(null);
+  const [addingPorter, setAddingPorter] = useState(false);
 
   useEffect(() => {
     // Track page visit on mount
@@ -165,6 +179,70 @@ const AdminDashboard = () => {
       alert(`Error deleting porter: ${error.message}`);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleAddPorter = async (e) => {
+    e.preventDefault();
+
+    if (!newPorter.name || !newPorter.phone || !newPorter.badgeNumber || !newPorter.station || !newPorter.password) {
+      alert('All fields are required');
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(newPorter.phone)) {
+      alert('Phone number must be a valid 10-digit number');
+      return;
+    }
+    if (newPorter.password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+    if (!newPorterImage) {
+      alert('A profile image is required');
+      return;
+    }
+
+    setAddingPorter(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('name', newPorter.name);
+      formData.append('phone', newPorter.phone);
+      formData.append('badgeNumber', newPorter.badgeNumber);
+      formData.append('station', newPorter.station);
+      formData.append('password', newPorter.password);
+      formData.append('image', newPorterImage);
+
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${API_BASE}/api/porter/register`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add porter');
+      }
+
+      alert(`Porter ${data.data.name} added successfully! They can log in with this mobile number and password.`);
+
+      setNewPorter({
+        name: "",
+        phone: "",
+        badgeNumber: "",
+        station: "Kurnool Station",
+        password: "",
+      });
+      setNewPorterImage(null);
+      e.target.reset();
+      fetchPorters();
+    } catch (error) {
+      console.error('Error adding porter:', error);
+      alert(`Failed to add porter: ${error.message}`);
+    } finally {
+      setAddingPorter(false);
     }
   };
 
@@ -481,6 +559,104 @@ const AdminDashboard = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Add New Porter */}
+            <Card className="shadow-lg border-primary/30">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-primary" />
+                  Add New Porter
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddPorter} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="porterName" className="text-sm font-semibold">Name *</Label>
+                      <Input
+                        id="porterName"
+                        value={newPorter.name}
+                        onChange={(e) => setNewPorter({ ...newPorter, name: e.target.value })}
+                        placeholder="Porter's full name"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="porterPhone" className="text-sm font-semibold">Mobile Number *</Label>
+                      <Input
+                        id="porterPhone"
+                        type="tel"
+                        value={newPorter.phone}
+                        onChange={(e) => setNewPorter({ ...newPorter, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                        placeholder="10-digit mobile number"
+                        maxLength={10}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="porterBadge" className="text-sm font-semibold">Badge Number *</Label>
+                      <Input
+                        id="porterBadge"
+                        value={newPorter.badgeNumber}
+                        onChange={(e) => setNewPorter({ ...newPorter, badgeNumber: e.target.value })}
+                        placeholder="e.g. KB-001"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="porterStation" className="text-sm font-semibold">Station *</Label>
+                      <Input
+                        id="porterStation"
+                        value={newPorter.station}
+                        onChange={(e) => setNewPorter({ ...newPorter, station: e.target.value })}
+                        placeholder="e.g. Kurnool Station"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="porterPassword" className="text-sm font-semibold">Password *</Label>
+                      <Input
+                        id="porterPassword"
+                        type="text"
+                        value={newPorter.password}
+                        onChange={(e) => setNewPorter({ ...newPorter, password: e.target.value })}
+                        placeholder="Minimum 6 characters"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="porterImage" className="text-sm font-semibold">Profile Image *</Label>
+                      <Input
+                        id="porterImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setNewPorterImage(e.target.files?.[0] || null)}
+                        className="h-11 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:text-sm file:font-semibold"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={addingPorter}
+                    className="flex items-center gap-2"
+                  >
+                    {addingPorter ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Add Porter
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
 
             {/* Porters Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
