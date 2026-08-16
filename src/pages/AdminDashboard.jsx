@@ -26,7 +26,9 @@ import {
   AlertCircle,
   Plus,
   Upload,
-  Loader2
+  Loader2,
+  Bell,
+  CheckCheck
 } from "lucide-react";
 
 const API_BASE = 'https://cooliemate-v2.onrender.com';
@@ -90,6 +92,9 @@ const AdminDashboard = () => {
   });
   const [newPorterImage, setNewPorterImage] = useState(null);
   const [addingPorter, setAddingPorter] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   useEffect(() => {
     // Track page visit on mount
@@ -97,6 +102,10 @@ const AdminDashboard = () => {
     
     fetchAnalytics();
     fetchPorters();
+    fetchNotifications();
+
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchAnalytics = async () => {
@@ -140,6 +149,46 @@ const AdminDashboard = () => {
       console.error('Error fetching porters:', error);
     } finally {
       setPortersLoading(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      setNotificationsLoading(true);
+      const response = await fetch(`${API_BASE}/api/admin/notifications`, {
+        headers: getAdminHeaders()
+      });
+      const data = await response.json();
+
+      if (handleUnauthorized(response)) return;
+
+      if (data.success) {
+        setNotifications(data.data.notifications);
+        setUnreadCount(data.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const markAllRead = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/notifications/read-all`, {
+        method: 'POST',
+        headers: getAdminHeaders()
+      });
+      const data = await response.json();
+
+      if (handleUnauthorized(response)) return;
+
+      if (data.success) {
+        setNotifications(notifications.map((n) => ({ ...n, read: true })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error('Error marking notifications read:', error);
     }
   };
 
@@ -297,7 +346,7 @@ const AdminDashboard = () => {
             <p className="text-muted-foreground">CooliMate Analytics & Insights</p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" onClick={fetchAnalytics}>
+            <Button variant="outline" onClick={() => { fetchAnalytics(); fetchNotifications(); }}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
@@ -331,6 +380,88 @@ const AdminDashboard = () => {
         {/* Analytics Tab Content */}
         {activeTab === 'analytics' && (
           <>
+            {/* Booking Notifications */}
+            <Card className="shadow-lg mb-8 border-primary/30">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-primary" />
+                  New Booking Alerts
+                  {unreadCount > 0 && (
+                    <Badge className="bg-red-100 text-red-700">{unreadCount} new</Badge>
+                  )}
+                </CardTitle>
+                {unreadCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={markAllRead}>
+                    <CheckCheck className="w-4 h-4 mr-2" />
+                    Mark all read
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                {notificationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+                    <span>Loading notifications...</span>
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">No booking notifications yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                    {notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-4 rounded-lg border ${
+                          n.read ? 'bg-muted/30 border-border' : 'bg-primary/5 border-primary/30'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold">
+                              {n.passengerName}{' '}
+                              <span className="text-muted-foreground font-normal">({n.phone})</span>
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              Train {n.trainNo} · {n.trainName} · Coach {n.coachNo} · Journey{' '}
+                              {n.dateOfJourney}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {n.station} · {n.numberOfBags} bags ({n.weight} kg)
+                              {n.isLateNight && (
+                                <Badge className="ml-1.5 bg-indigo-100 text-indigo-700">
+                                  Late night
+                                </Badge>
+                              )}
+                              {n.isPriority && (
+                                <Badge className="ml-1.5 bg-amber-100 text-amber-700">Priority</Badge>
+                              )}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Porter: {n.porterName} ({n.porterBadgeNumber}) · {n.porterPhone}
+                            </p>
+                            {n.notes && (
+                              <p className="text-sm mt-1 italic text-muted-foreground">"{n.notes}"</p>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-bold text-primary">₹{n.totalPrice}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(n.createdAt).toLocaleString()}
+                            </p>
+                            {!n.read && (
+                              <Badge className="mt-1 bg-red-100 text-red-700">New</Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
               <Card className="shadow-lg hover:shadow-xl transition-shadow">

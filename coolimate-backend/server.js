@@ -54,7 +54,7 @@ async function sendBookingNotificationEmail(bookingData, porter) {
     const mailOptions = {
       from: process.env.ADMIN_EMAIL,
       to: process.env.ADMIN_EMAIL,
-      subject: `🚀 New Booking Request - ${bookingData.passengerName}`,
+      subject: `🚀 New Booking Request - ${bookingData.passengerName} (${bookingData.phone})`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
@@ -278,6 +278,35 @@ const bookingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+
+// Admin Notification Schema
+const adminNotificationSchema = new mongoose.Schema({
+  bookingId: { type: String, required: true },
+  passengerName: String,
+  phone: String,
+  pnr: String,
+  station: String,
+  trainNo: String,
+  trainName: String,
+  coachNo: String,
+  boardingStation: String,
+  destinationStation: String,
+  dateOfJourney: String,
+  arrivalTime: String,
+  numberOfBags: Number,
+  weight: Number,
+  isLateNight: Boolean,
+  isPriority: Boolean,
+  totalPrice: Number,
+  notes: String,
+  porterName: String,
+  porterBadgeNumber: String,
+  porterPhone: String,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const AdminNotification = mongoose.model('AdminNotification', adminNotificationSchema);
 
 // Review Schema
 const reviewSchema = new mongoose.Schema({
@@ -834,6 +863,53 @@ app.get('/api/analytics/dashboard', authenticateAdmin, async (req, res) => {
   }
 });
 
+app.get('/api/admin/notifications', authenticateAdmin, async (req, res) => {
+  try {
+    const notifications = await AdminNotification.find()
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+    const unreadCount = await AdminNotification.countDocuments({ read: false });
+
+    res.json({
+      success: true,
+      data: {
+        unreadCount,
+        notifications: notifications.map((n) => ({
+          ...n,
+          id: n._id.toString(),
+          _id: undefined
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('❌ Fetch Notifications Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching notifications',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/notifications/read-all', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await AdminNotification.updateMany({ read: false }, { $set: { read: true } });
+    res.json({
+      success: true,
+      message: 'All notifications marked as read',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('❌ Mark Notifications Read Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking notifications as read',
+      error: error.message
+    });
+  }
+});
+
 app.get('/api/porter/debug/:identifier', authenticateAdmin, async (req, res) => {
   try {
     const { identifier } = req.params;
@@ -1272,6 +1348,36 @@ app.post('/api/bookings', async (req, res) => {
     sendBookingNotificationEmail(emailData, porter).catch((error) => {
       console.error('❌ Email notification failed:', error);
     });
+
+    // Save admin notification in database (guaranteed delivery, email may fail)
+    try {
+      await AdminNotification.create({
+        bookingId: booking._id.toString(),
+        passengerName: bookingData.passengerName,
+        phone: bookingData.phone,
+        pnr: bookingData.pnr,
+        station: bookingData.station,
+        trainNo: bookingData.trainNo,
+        trainName: bookingData.trainName,
+        coachNo: bookingData.coachNo,
+        boardingStation: bookingData.boardingStation,
+        destinationStation: bookingData.destinationStation,
+        dateOfJourney: bookingData.dateOfJourney,
+        arrivalTime: bookingData.arrivalTime,
+        numberOfBags: bookingData.numberOfBags,
+        weight: bookingData.weight,
+        isLateNight: bookingData.isLateNight,
+        isPriority: bookingData.isPriority,
+        totalPrice: bookingData.totalPrice,
+        notes: bookingData.notes,
+        porterName: porter.name,
+        porterBadgeNumber: porter.badgeNumber,
+        porterPhone: porter.phone
+      });
+      console.log('✅ Admin notification saved for booking', booking._id);
+    } catch (notifError) {
+      console.error('❌ Failed to save admin notification:', notifError.message);
+    }
 
     // Track booking analytics
     if (req.visitorInfo) {
