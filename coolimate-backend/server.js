@@ -909,10 +909,7 @@ app.post('/api/porter/register', upload.single('image'), async (req, res) => {
     }
 
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Profile image is required'
-      });
+      console.log('ℹ️ No profile image uploaded - using placeholder');
     }
 
     const existingPorter = await Porter.findOne({
@@ -920,9 +917,11 @@ app.post('/api/porter/register', upload.single('image'), async (req, res) => {
     });
 
     if (existingPorter) {
-      const filePath = path.join(__dirname, 'uploads', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (req.file) {
+        const filePath = path.join(__dirname, 'uploads', req.file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       }
       return res.status(400).json({
         success: false,
@@ -936,7 +935,7 @@ app.post('/api/porter/register', upload.single('image'), async (req, res) => {
       badgeNumber,
       station,
       password,
-      image: req.file.filename
+      image: req.file ? req.file.filename : ''
     });
 
     await porter.save();

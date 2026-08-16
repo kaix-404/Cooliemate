@@ -197,10 +197,6 @@ const AdminDashboard = () => {
       alert('Password must be at least 6 characters');
       return;
     }
-    if (!newPorterImage) {
-      alert('A profile image is required');
-      return;
-    }
 
     setAddingPorter(true);
 
@@ -626,15 +622,15 @@ const AdminDashboard = () => {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="porterImage" className="text-sm font-semibold">Profile Image *</Label>
+                      <Label htmlFor="porterImage" className="text-sm font-semibold">Profile Image (Optional)</Label>
                       <Input
                         id="porterImage"
                         type="file"
                         accept="image/*"
                         onChange={(e) => setNewPorterImage(e.target.files?.[0] || null)}
                         className="h-11 file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:text-sm file:font-semibold"
-                        required
                       />
+                      <p className="text-xs text-muted-foreground">No image? A placeholder avatar will be shown.</p>
                     </div>
                   </div>
                   <Button
