@@ -28,7 +28,8 @@ import {
   Upload,
   Loader2,
   Bell,
-  CheckCheck
+  CheckCheck,
+  Send
 } from "lucide-react";
 
 const API_BASE = 'https://cooliemate-v2.onrender.com';
@@ -189,6 +190,27 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error marking notifications read:', error);
+    }
+  };
+
+  const testTelegram = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/telegram/test`, {
+        method: 'POST',
+        headers: getAdminHeaders()
+      });
+      const data = await response.json();
+
+      if (handleUnauthorized(response)) return;
+
+      if (data.success) {
+        alert(data.message);
+      } else {
+        alert(`Telegram test failed: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Error testing telegram:', error);
+      alert(`Telegram test failed: ${error.message}`);
     }
   };
 
@@ -396,6 +418,10 @@ const AdminDashboard = () => {
                     Mark all read
                   </Button>
                 )}
+                <Button variant="outline" size="sm" onClick={testTelegram}>
+                  <Send className="w-4 h-4 mr-2" />
+                  Test Telegram
+                </Button>
               </CardHeader>
               <CardContent>
                 {notificationsLoading ? (

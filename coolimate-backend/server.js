@@ -193,6 +193,95 @@ async function sendBookingNotificationEmail(bookingData, porter) {
   }
 }
 
+// ==================== TELEGRAM ALERTS ====================
+
+// Discover and persist the admin's Telegram chat id.
+// Works by reading the most recent update the bot received - the admin just
+// needs to open the bot in Telegram and press Start once.
+async function getTelegramChatId() {
+  try {
+    const saved = await Config.findOne({ key: 'telegramChatId' });
+    if (saved && saved.value) return saved.value;
+
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return null;
+
+    const response = await fetch(`https://api.telegram.org/bot${token}/getUpdates?offset=-1`, {
+      signal: AbortSignal.timeout(10000)
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error('❌ Telegram getUpdates failed:', data.description);
+      return null;
+    }
+    const update = data.result && data.result[0];
+    const chat = update && update.message && update.message.chat;
+    if (chat && chat.id) {
+      await Config.updateOne(
+        { key: 'telegramChatId' },
+        { $set: { value: chat.id } },
+        { upsert: true }
+      );
+      console.log('✅ Telegram chat discovered:', chat.id);
+      return chat.id;
+    }
+    return null;
+  } catch (error) {
+    console.error('❌ Telegram chat discovery error:', error.message);
+    return null;
+  }
+}
+
+// Send a booking alert to the admin's Telegram chat
+async function sendTelegramAlert(bookingData, porter) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+      console.warn('⚠️ TELEGRAM_BOT_TOKEN not set. Telegram alerts disabled.');
+      return false;
+    }
+
+    const chatId = await getTelegramChatId();
+    if (!chatId) {
+      console.warn('⚠️ No Telegram chat found. Open the bot in Telegram and press Start.');
+      return false;
+    }
+
+    const message = [
+      'NEW BOOKING REQUEST',
+      '---------------------',
+      `Customer: ${bookingData.passengerName}`,
+      `Phone: ${bookingData.phone}`,
+      `PNR: ${bookingData.pnr || 'N/A'}`,
+      `Train: ${bookingData.trainNo || 'N/A'} - ${bookingData.trainName || 'N/A'}`,
+      `Coach: ${bookingData.coachNo || 'N/A'}`,
+      `Journey: ${bookingData.dateOfJourney || 'N/A'}${bookingData.arrivalTime ? ' at ' + bookingData.arrivalTime : ''}`,
+      `Route: ${bookingData.boardingStation || 'N/A'} (${bookingData.boardingStationCode || ''}) -> ${bookingData.destinationStation || 'N/A'} (${bookingData.destinationStationCode || ''})`,
+      `Bags: ${bookingData.numberOfBags || 0} (${bookingData.weight || 0} kg)${bookingData.isLateNight ? ' [Late night]' : ''}${bookingData.isPriority ? ' [Priority]' : ''}`,
+      `Porter: ${porter.name} (${porter.badgeNumber}) - ${porter.phone}`,
+      `Total: Rs. ${bookingData.totalPrice}`,
+      bookingData.notes ? `Notes: ${bookingData.notes}` : null
+    ].filter(Boolean).join('\n');
+
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+      signal: AbortSignal.timeout(10000)
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error('❌ Telegram send failed:', data.description);
+      return false;
+    }
+    console.log(`✅ Telegram alert sent for booking ${bookingData.bookingId}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Telegram alert error:', error.message);
+    return false;
+  }
+}
+
 // Middleware - UPDATED CORS CONFIGURATION
 app.use(cors({
   origin: (origin, callback) => {
@@ -307,6 +396,14 @@ const adminNotificationSchema = new mongoose.Schema({
 });
 
 const AdminNotification = mongoose.model('AdminNotification', adminNotificationSchema);
+
+// Config Schema (key-value settings, e.g. discovered Telegram chat id)
+const configSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  value: mongoose.Schema.Types.Mixed
+});
+
+const Config = mongoose.model('Config', configSchema);
 
 // Review Schema
 const reviewSchema = new mongoose.Schema({
@@ -910,6 +1007,49 @@ app.post('/api/admin/notifications/read-all', authenticateAdmin, async (req, res
   }
 });
 
+app.post('/api/admin/telegram/test', authenticateAdmin, async (req, res) => {
+  try {
+    const sent = await sendTelegramAlert({
+      passengerName: 'Test Alert',
+      phone: '1234567890',
+      pnr: 'N/A',
+      trainNo: 'N/A',
+      trainName: 'N/A',
+      coachNo: 'N/A',
+      dateOfJourney: new Date().toLocaleDateString(),
+      boardingStation: 'N/A',
+      boardingStationCode: '',
+      destinationStation: 'N/A',
+      destinationStationCode: '',
+      numberOfBags: 0,
+      weight: 0,
+      isLateNight: false,
+      isPriority: false,
+      totalPrice: 0,
+      notes: 'This is a test alert from the admin dashboard.'
+    }, { name: 'System', badgeNumber: 'TEST', phone: 'N/A' });
+
+    if (sent) {
+      return res.json({ success: true, message: 'Test alert sent to your Telegram!' });
+    }
+
+    const tokenSet = !!process.env.TELEGRAM_BOT_TOKEN;
+    res.status(400).json({
+      success: false,
+      message: tokenSet
+        ? 'Alert could not be sent. Open the bot in Telegram and press Start (send /start), then try again.'
+        : 'TELEGRAM_BOT_TOKEN is not set on the server. Add it in the Render environment variables, then try again.'
+    });
+  } catch (error) {
+    console.error('❌ Telegram Test Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error testing Telegram alert',
+      error: error.message
+    });
+  }
+});
+
 app.get('/api/porter/debug/:identifier', authenticateAdmin, async (req, res) => {
   try {
     const { identifier } = req.params;
@@ -1347,6 +1487,11 @@ app.post('/api/bookings', async (req, res) => {
     };
     sendBookingNotificationEmail(emailData, porter).catch((error) => {
       console.error('❌ Email notification failed:', error);
+    });
+
+    // Send Telegram alert to admin (non-blocking)
+    sendTelegramAlert(emailData, porter).catch((error) => {
+      console.error('❌ Telegram alert failed:', error);
     });
 
     // Save admin notification in database (guaranteed delivery, email may fail)
