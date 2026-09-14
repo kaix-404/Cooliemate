@@ -14,6 +14,15 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Footer from "@/pages/Footer";
 
+// Services are currently available only at Kurnool Town (KRNT) station.
+const KURNOL_STATION_TAGS = ['kurnool', 'kurnool town', 'kurnool city', 'krnt', 'krnl', 'kkl'];
+
+const isKurnoolStation = (station) => {
+  const normalized = (station || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!normalized) return true;
+  return KURNOL_STATION_TAGS.some((tag) => normalized.includes(tag.replace(/[^a-z0-9]/g, '')));
+};
+
 const BookPorter = () => {
   const navigate = useNavigate();
   
@@ -249,6 +258,15 @@ const BookPorter = () => {
       return;
     }
 
+    if (!stationAvailable) {
+      playSound('form-error');
+      sonnerToast.error('Unavailable at this station', {
+        description: `We currently serve only Kurnool Town (KRNT) station. Services at ${formData.station} are Coming Soon!`,
+        duration: 6000,
+      });
+      return;
+    }
+
     setLoading(true);
 
     const bookingData = {
@@ -291,6 +309,8 @@ const BookPorter = () => {
       });
     }, 1500);
   };
+
+  const stationAvailable = isKurnoolStation(formData.station);
 
   const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
 
@@ -564,6 +584,22 @@ const BookPorter = () => {
                     <p className="text-xs text-gray-500">
                       Enter the station where you need porter service
                     </p>
+                    {!stationAvailable && formData.station.trim() && (
+                      <div className="mt-2 flex items-start gap-3 p-3 sm:p-4 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-900">
+                        <Clock className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600" />
+                        <div>
+                          <p className="font-bold">
+                            We're not available at {formData.station} yet
+                          </p>
+                          <p className="text-sm text-amber-800 mt-0.5">
+                            We currently operate only at Kurnool Town (KRNT) station.
+                          </p>
+                          <p className="font-black text-amber-700 mt-1 text-sm tracking-wide uppercase">
+                            Coming Soon!
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2 sm:space-y-3">
@@ -757,7 +793,7 @@ const BookPorter = () => {
                   <Button
                     type="submit"
                     className="w-full h-12 sm:h-14 text-base sm:text-lg font-bold rounded-xl sm:rounded-2xl bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-300 hover:scale-[1.02] group"
-                    disabled={loading}
+                    disabled={loading || !stationAvailable}
                   >
                     {loading ? (
                       <>
