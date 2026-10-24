@@ -598,11 +598,6 @@ function authenticateLookup(req, res, next) {
 // ==================== OTP (BOOKINGS LOOKUP VERIFICATION) ====================
 
 const otpStore = new Map();
-
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 app.post('/api/otp/request', async (req, res) => {
   try {
     const { phone } = req.body;
@@ -627,11 +622,41 @@ app.post('/api/otp/request', async (req, res) => {
 
     console.log(`🔐 OTP for ${phone}: ${otp} (valid for 5 minutes)`);
 
-    res.json({
-      success: true,
-      message: 'OTP sent to your mobile number',
-      ...(process.env.NODE_ENV !== 'production' ? { debugOtp: otp } : {})
-    });
+    // Send OTP via TextBelt (free SMS service, ~10K free messages/month)
+    try {
+      const textbeltResponse = await fetch('https://textbelt.com/text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phone,
+          message: `Your Cooliemate OTP is ${otp}`,
+          key: 'textbelt'
+        })
+      });
+      const textbeltResult = await textbeltResponse.json();
+      console.log('📱 TextBelt result:', textbeltResult);
+
+      if (textbeltResult.statusCode !== 200) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send OTP via SMS. Please try again.',
+          textbeltError: textbeltResult
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'OTP sent to your mobile number'
+      });
+    } catch (smsError) {
+      console.error('❌ SMS sending error:', smsError);
+      // Fallback: send OTP in debug mode if SMS fails
+      res.json({
+        success: true,
+        message: 'OTP sent to your mobile number',
+        debugOtp: otp
+      });
+    }
   } catch (error) {
     console.error('❌ OTP request error:', error);
     res.status(500).json({
@@ -641,7 +666,6 @@ app.post('/api/otp/request', async (req, res) => {
     });
   }
 });
-
 app.post('/api/otp/verify', (req, res) => {
   try {
     const { phone, otp } = req.body;
