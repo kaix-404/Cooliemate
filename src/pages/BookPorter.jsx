@@ -279,8 +279,7 @@ const BookPorter = () => {
     if (verifyingOtp) {      sonnerToast.info('Verifying OTP...', {
         description: 'Please wait while your phone number is being verified',
         duration: 5000,
-        description: 'Phone number must be 10 digits',
-      return;    }
+    }    }
     if (!stationAvailable) {      sonnerToast.error('Unavailable at this station', {
         description: `We currently serve only Kurnool Town (KRNT) station. Services at ${formData.station} are Coming Soon!`,
         duration: 6000,
