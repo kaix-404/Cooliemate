@@ -64,11 +64,26 @@ const MyBookings = () => {
 
       const data = await response.json();
 
-      if (!response.ok) {
+      // Handle debugOtp fallback (when TextBelt SMS fails, OTP is available for dev)
+      if (data.debugOtp) {
+        console.log('📱 Using debug OTP (TextBelt SMS failed, using debug mode):', data.debugOtp);
+        setOtp(data.debugOtp);
+        setStep('otp');
+        startCooldown();
+        toast({
+          title: 'OTP Sent',
+          description: 'Enter the 6-digit OTP to view your bookings',
+        });
+      } else if (!response.ok) {
         throw new Error(data.message || 'Failed to send OTP');
+      } else {
+        setStep('otp');
+        startCooldown();
+        toast({
+          title: 'OTP Sent',
+          description: 'Enter the 6-digit OTP to view your bookings',
+        });
       }
-
-      setStep("otp");
       startCooldown();
       toast({
         title: "OTP Sent",
