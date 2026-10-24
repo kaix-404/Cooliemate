@@ -627,29 +627,45 @@ app.post('/api/otp/request', async (req, res) => {
 
     console.log(`🔐 OTP for ${phone}: ${otp} (valid for 5 minutes)`);
 
-    // Send OTP via TextBelt (free SMS service, ~10K free messages/month)
+    // Send OTP via MSG91 (free 6K SMS/month for India)
     try {
-      const textbeltResponse = await fetch('https://textbelt.com/text', {
+      const msg91Response = await fetch('https://control.msg91.com/api/v2/sms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'phone=' + encodeURIComponent(phone) + '&message=' + encodeURIComponent('Your Cooliemate OTP is ' + otp) + '&key=textbelt'
+        headers: {
+          'Content-Type': 'application/json',
+          'authkey': process.env.MSG91_API_KEY
+        },
+        body: JSON.stringify({
+          sender: 'COOLIEMATE',
+          route: '4',
+          country: '91',
+          dltId: '',
+          phone: phone,
+          text: 'Your Cooliemate OTP is ' + otp
+        })
       });
-      const textbeltResult = await textbeltResponse.json();
-      console.log('📱 TextBelt result:', textbeltResult);
+      const msg91Result = await msg91Response.json();
+      console.log('☑️ MSG91 result:', msg91Result);
 
-      // Always attempt to send OTP, even if TextBelt reporting varies
-      // (TextBelt may report differently; we still mark the request as sent)
-      res.json({
-        success: true,
-        message: 'OTP sent to your mobile number',
-        debugOtp: otp
-      });
+      if (msg91Result.type === 'success') {
+        res.json({
+          success: true,
+          message: 'OTP sent via MSG91'
+        });
+      } else {
+        // Fallback to debugOtp if MSG91 fails
+        res.json({
+          success: true,
+          message: 'OTP sent (fallback mode)',
+          debugOtp: otp
+        });
+      }
     } catch (smsError) {
       console.error('❌ SMS sending error:', smsError);
       // Fallback: send OTP in debug mode if SMS fails
       res.json({
         success: true,
-        message: 'OTP sent to your mobile number',
+        message: 'OTP sent (fallback mode)',
         debugOtp: otp
       });
     }
