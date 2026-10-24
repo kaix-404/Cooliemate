@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,6 +129,10 @@ const BookPorter = () => {
     isLateNight: false,
     isPriority: false,
   });
+  const [otp, setOtp] = useState("");
+  const [otpRequested, setOtpRequested] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
 
   const [pnrInfo, setPnrInfo] = useState(null);
   const [pricing, setPricing] = useState(null);
@@ -231,45 +235,59 @@ const BookPorter = () => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (
-      !formData.fullName ||
-      !formData.phone ||
-      !formData.station ||
-      !formData.numberOfBags ||
-      !formData.weight
-    ) {
-      playSound('form-error');
-      sonnerToast.error('Missing Information', {
-        description: 'Please fill in all required fields',
-        duration: 4000,
-      });
-      return;
-    }
-
-    if (formData.phone.length !== 10) {
-      playSound('form-error');
+  const handleRequestOtp = async () => {
+    if (!/^[0-9]{10}$/.test(formData.phone)) {
       sonnerToast.error('Invalid Phone Number', {
         description: 'Phone number must be 10 digits',
         duration: 4000,
       });
       return;
     }
+    
+    setOtpRequested(true);
+    
+    try {      const response = await axios.post('/api/otp/request', { phone: formData.phone });            setOtp(String(Math.floor(100000 + Math.random() * 900000)));      setVerifyingOtp(true);            sonnerToast.success('OTP Sent', {
+        description: 'A 6-digit OTP has been sent to your phone number',
+        duration: 5000,
+      });    } catch (error) {      console.error('OTP request error:', error);      sonnerToast.error('OTP Request Failed', {
+        description: error.response?.data?.message || 'Failed to send OTP. Please try again.',
+        duration: 5000,
+      });    } finally {      setOtpRequested(false);    }  };
 
-    if (!stationAvailable) {
-      playSound('form-error');
-      sonnerToast.error('Unavailable at this station', {
+  const handleVerifyOtp = async () => {    if (!/^[0-9]{6}$/.test(otp)) {      sonnerToast.error('Invalid OTP', {
+        description: 'Please enter a 6-digit OTP',
+        duration: 4000,
+      });
+      return;    }        setVerifyingOtp(true);        try {      const response = await axios.post('/api/otp/verify', { phone: formData.phone, otp });            if (response.data.success) {        sonnerToast.success('OTP Verified', {
+          description: 'Phone number verified successfully',
+          duration: 4000,
+        });        setVerifyingOtp(false);        setOtpVerified(true);        return true;      }            sonnerToast.error('OTP Verification Failed', {
+        description: response.data.message || 'Invalid OTP. Please try again.',
+        duration: 4000,
+      });    } catch (error) {      console.error('OTP verify error:', error);      sonnerToast.error('OTP Verification Failed', {
+        description: error.response?.data?.message || 'Failed to verify OTP. Please try again.',
+        duration: 4000,
+      }
+    } finally {      setVerifyingOtp(false);    }  };
+
+  const handleSubmit = (e) => {    e.preventDefault();
+    // Verify OTP before allowing booking submission    if (!otpVerified) {      sonnerToast.error('OTP Required', {
+        description: 'Please verify your phone number with the OTP sent to your device',
+        duration: 4000,
+      });
+      return;    }
+    if (verifyingOtp) {      sonnerToast.info('Verifying OTP...', {
+        description: 'Please wait while your phone number is being verified',
+        duration: 5000,
+        description: 'Phone number must be 10 digits',
+      return;    }
+    if (!stationAvailable) {      sonnerToast.error('Unavailable at this station', {
         description: `We currently serve only Kurnool Town (KRNT) station. Services at ${formData.station} are Coming Soon!`,
         duration: 6000,
       });
-      return;
-    }
-
-    setLoading(true);
-
-    const bookingData = {
+      return;    }
+    setLoading(true);
+    const bookingData = {
       personalDetails: {
         fullName: formData.fullName,
         phone: formData.phone,
