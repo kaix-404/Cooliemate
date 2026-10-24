@@ -598,6 +598,11 @@ function authenticateLookup(req, res, next) {
 // ==================== OTP (BOOKINGS LOOKUP VERIFICATION) ====================
 
 const otpStore = new Map();
+
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 app.post('/api/otp/request', async (req, res) => {
   try {
     const { phone } = req.body;
