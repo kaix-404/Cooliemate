@@ -272,12 +272,7 @@ const MyBookings = () => {
                             Booking ID: {booking._id.substring(0, 8).toUpperCase()}
                           </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          booking.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          booking.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
-                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
+                        <span className="px-3 py-1 rounded-full text-sm font-semibold">
                           {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                         </span>
                       </div>
