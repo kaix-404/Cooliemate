@@ -90,7 +90,7 @@ const MyBookings = () => {
       });
 
       setTimeout(() => {
-        navigate("/bookPorter");
+        navigate("/book");
       }, 1000);
     } catch (error) {
       console.error('Error logging in:', error);
@@ -162,7 +162,7 @@ const MyBookings = () => {
 
       // Redirect to Book Porter immediately after successful registration
       setTimeout(() => {
-        navigate("/bookPorter");
+        navigate("/book");
       }, 800);
     } catch (error) {
       console.error("Error registering:", error);
