@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, Search, Package, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Phone, Search, Package, Loader2, ShieldCheck, ArrowLeft, Lock } from "lucide-react";
 import Navbar from "@/components/Navbar";
 const API_BASE = 'https://cooliemate-v2.onrender.com';
 
