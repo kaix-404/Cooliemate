@@ -13,6 +13,8 @@ const MyBookings = () => {
   const [step, setStep] = useState("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [showRegister, setShowRegister] = useState(false);
   const [bookings, setBookings] = useState([]);
   const [loggingIn, setLoggingIn] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -99,6 +101,81 @@ const MyBookings = () => {
       setLoggingIn(false);
     }
   };
+  const handleRegister = async (e) => {
+    e?.preventDefault();
+
+    if (!/^[0-9]{10}$/.test(phoneNumber)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid 10-digit mobile number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!password) {
+      toast({
+        title: "Missing Password",
+        description: "Please enter your password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!name) {
+      toast({
+        title: "Missing Name",
+        description: "Please enter your name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoggingIn(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/customer/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone: phoneNumber, password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      // Store authentication data in localStorage
+      localStorage.setItem("customerToken", data.data.token);
+      localStorage.setItem("customerId", data.data.id);
+      localStorage.setItem("customerPhone", data.data.phone);
+
+      toast({
+        title: "Registration Successful",
+        description: "Welcome! You are now registered.",
+        variant: "success",
+      });
+
+      setTimeout(() => {
+        setShowRegister(false);
+        setStep("phone");
+        setPhoneNumber("");
+        setPassword("");
+        setName("");
+      }, 1000);
+    } catch (error) {
+      console.error("Error registering:", error);
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Failed to register. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
 
   const handleBack = () => {
     setStep("phone");
@@ -122,63 +199,135 @@ const MyBookings = () => {
         <Card className="mb-8 shadow-xl">
           <CardContent className="pt-6">
             {step === "phone" ? (
-              <form onSubmit={handleLogin}>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="phone" className="flex items-center gap-2 text-base font-semibold mb-2">
-                      <Phone className="w-4 h-4" />
-                      Enter Your Mobile Number
-                    </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                      placeholder="Enter your 10-digit mobile number"
-                      maxLength={10}
-                      className="h-14 text-base"
-                      required
-                    />
-                    <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      Enter your password to access your bookings
-                    </p>
-                  </div>
-                  <div>
-                    <Label htmlFor="password" className="flex items-center gap-2 text-base font-semibold mb-2">
-                      <Lock className="w-4 h-4" />
-                      Password
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      maxLength={32}
-                      className="h-14 text-base"
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600"
-                    disabled={loggingIn}
-                  >
-                    {loggingIn ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Logging in...
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck className="w-5 h-5 mr-2" />
-                        Login
-                      </>
-                    )}
-                  </Button>
+              <div className="space-y-4">
+                <div className="text-center mb-3">
+                  {showRegister ? (
+                    <Button variant="link" onClick={() => setShowRegister(false)}>Login</Button>
+                  ) : (
+                    <Button variant="link" onClick={() => setShowRegister(true)}>Register</Button>
+                  )}
                 </div>
-              </form>
+                {showRegister ? (
+                  <form onSubmit={handleRegister}>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="name" className="flex items-center gap-2 text-sm font-semibold mb-2">
+                          Name
+                        </Label>
+                        <Input
+                          id="name"
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Enter your full name"
+                          maxLength={50}
+                          className="h-12 text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone" className="flex items-center gap-2 text-base font-semibold mb-2">
+                          <Phone className="w-4 h-4" />
+                          Enter Your Mobile Number
+                        </Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          placeholder="Enter your 10-digit mobile number"
+                          maxLength={10}
+                          className="h-14 text-base"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="password" className="flex items-center gap-2 text-base font-semibold mb-2">
+                          <Lock className="w-4 h-4" />
+                          Password
+                        </Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Enter your password"
+                          maxLength={64}
+                          className="h-14 text-base"
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full h-12 text-base font-bold bg-gradient-to-r from-green-600 to-emerald-600" disabled={loggingIn}>
+                        {loggingIn ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Registering...
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="w-5 h-5 mr-2" />
+                            Register
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                ) : (
+                  <form onSubmit={handleLogin}>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="phone" className="flex items-center gap-2 text-base font-semibold mb-2">
+                          <Phone className="w-4 h-4" />
+                          Enter Your Mobile Number
+                        </Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          placeholder="Enter your 10-digit mobile number"
+                          maxLength={10}
+                          className="h-14 text-base"
+                          required
+                        />
+                        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Enter your password to access your bookings
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="password" className="flex items-center gap-2 text-base font-semibold mb-2">
+                          <Lock className="w-4 h-4" />
+                          Password
+                        </Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Enter your password"
+                          maxLength={64}
+                          className="h-14 text-base"
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full h-12 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600" disabled={loggingIn}>
+                        {loggingIn ? (
+                          <>
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                            Logging in...
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="w-5 h-5 mr-2" />
+                            Login
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </div>
             ) : (
               <>
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">
