@@ -1,4 +1,14 @@
-export default async function handler(req: any, res: any) {
+interface PnrQuery {
+  pnr: string;
+}
+
+interface PnrResponse {
+  success: boolean;
+  data?: unknown;
+  message?: string;
+}
+
+export default async function handler(req: { query: PnrQuery }, res: PnrResponse) {
   const { pnr } = req.query;
 
   if (!pnr || typeof pnr !== "string" || !/^[A-Za-z0-9]{10}$/.test(pnr)) {

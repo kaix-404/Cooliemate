@@ -466,8 +466,6 @@ customerSchema.methods.comparePassword = async function(candidatePassword) {
 
 const Customer = mongoose.model('Customer', customerSchema);
 
-// Booking Schema
-const bookingSchema = new mongoose.Schema({
 const Review = mongoose.model('Review', reviewSchema);
 const Analytics = mongoose.model('Analytics', analyticsSchema);
 
