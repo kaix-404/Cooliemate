@@ -49,7 +49,6 @@ const Navbar = () => {
     <>
       {/* Desktop Navbar */}
       <motion.nav
-        initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, type: "spring" }}
         className={`hidden md:block sticky top-0 z-50 transition-all duration-300 ${
