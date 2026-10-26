@@ -183,9 +183,9 @@ const MyBookings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <Navbar />
-      <div className="container mx-auto px-4 max-w-4xl">
+      <main className="min-h-screen flex flex-col items-center justify-center px-4">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-slate-900 mb-4">
             My Bookings
@@ -470,7 +470,7 @@ const MyBookings = () => {
             )}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 };
