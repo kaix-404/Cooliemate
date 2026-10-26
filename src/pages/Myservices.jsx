@@ -12,14 +12,11 @@ const MyBookings = () => {
   const { toast } = useToast();
   const [step, setStep] = useState("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
+  const [password, setPassword] = useState("");
   const [bookings, setBookings] = useState([]);
-  const [requestingOtp, setRequestingOtp] = useState(false);
-  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [loggingIn, setLoggingIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const cooldownRef = useRef(null);
 
   useEffect(() => {
     return () => {
@@ -41,7 +38,7 @@ const MyBookings = () => {
     }, 1000);
   };
 
-  const handleRequestOtp = async (e) => {
+  const handleLogin = async (e) => {
     e?.preventDefault();
 
     if (!/^[0-9]{10}$/.test(phoneNumber)) {
@@ -53,118 +50,81 @@ const MyBookings = () => {
       return;
     }
 
-    setRequestingOtp(true);
-
-    try {
-      const response = await fetch(`${API_BASE}/api/otp/request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneNumber })
-      });
-
-      const data = await response.json();
-
-      // Handle debugOtp fallback (when TextBelt SMS fails, OTP is available for dev)
-      if (data.debugOtp) {
-        console.log('📱 Using debug OTP (TextBelt SMS failed, using debug mode):', data.debugOtp);
-        setOtp(data.debugOtp);
-        setStep('otp');
-        startCooldown();
-        toast({
-          title: 'OTP Sent',
-          description: 'Enter the 6-digit OTP to view your bookings',
-        });
-      } else if (!response.ok) {
-        throw new Error(data.message || 'Failed to send OTP');
-      } else {
-        setStep('otp');
-        startCooldown();
-        toast({
-          title: 'OTP Sent',
-          description: 'Enter the 6-digit OTP to view your bookings',
-        });
-      }
-      startCooldown();
+    if (!password) {
       toast({
-        title: "OTP Sent",
-        description: "Enter the 6-digit OTP to view your bookings",
-      });
-    } catch (error) {
-      console.error('Error requesting OTP:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send OTP. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setRequestingOtp(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-
-    if (!/^[0-9]{6}$/.test(otp)) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter the 6-digit OTP",
+        title: "Missing Password",
+        description: "Please enter your password",
         variant: "destructive",
       });
       return;
     }
 
-    setVerifyingOtp(true);
+    setLoggingIn(true);
 
     try {
-      const verifyResponse = await fetch(`${API_BASE}/api/otp/verify`, {
+      const response = await fetch(`${API_BASE}/api/porter/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phoneNumber, otp })
+        body: JSON.stringify({ phone: phoneNumber, password })
       });
-
-      const verifyData = await verifyResponse.json();
-
-      if (!verifyResponse.ok) {
-        throw new Error(verifyData.message || 'OTP verification failed');
-      }
-
-      setLoading(true);
-
-      const response = await fetch(`${API_BASE}/api/bookings/phone/${phoneNumber}`, {
-        headers: { 'Authorization': `Bearer ${verifyData.token}` }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
-      }
 
       const data = await response.json();
-      setBookings(data.data || []);
-      setSearched(true);
-      setStep("phone");
 
-      if (data.data.length === 0) {
-        toast({
-          title: "No Bookings Found",
-          description: "No bookings found for this phone number",
-        });
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
       }
-    } catch (error) {
-      console.error('Error verifying OTP:', error);
+
+      // Store authentication data in localStorage (matching PorterDashboard expectations)
+      localStorage.setItem('porterToken', data.data.token);
+      localStorage.setItem('porterId', data.data.id);
+      localStorage.setItem('porterBadgeNumber', data.data.badgeNumber);
+      localStorage.setItem('porterName', data.data.name);
+
+      // Also store full porter data for easy access
+      localStorage.setItem('porterData', JSON.stringify({
+        token: data.data.token,
+        id: data.data.id,
+        phone: data.data.phone,
+        badgeNumber: data.data.badgeNumber,
+        name: data.data.name,
+        station: data.data.station,
+        image: data.data.image,
+        rating: data.data.rating,
+        totalTrips: data.data.totalTrips,
+        experience: data.data.experience || '1 year',
+        specialization: data.data.specialization || 'General Luggage',
+        languages: data.data.languages || ['English', 'Hindi'],
+        isOnline: data.data.isOnline
+      }));
+
+      setStep("phone");
+      setPhoneNumber("");
+      setPassword("");
+
       toast({
-        title: "Verification Failed",
-        description: error.message || "Please try again.",
+        title: "Login Successful",
+        description: `Welcome back, ${data.data.name}! You are now online.`,
+        variant: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/porter-dashboard");
+      }, 1000);
+    } catch (error) {
+      console.error('Error logging in:', error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setVerifyingOtp(false);
-      setLoading(false);
+      setLoggingIn(false);
     }
   };
 
   const handleBack = () => {
     setStep("phone");
-    setOtp("");
+    setPassword("");
   };
 
   return (
@@ -184,7 +144,7 @@ const MyBookings = () => {
         <Card className="mb-8 shadow-xl">
           <CardContent className="pt-6">
             {step === "phone" ? (
-              <form onSubmit={handleRequestOtp}>
+              <form onSubmit={handleLogin}>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="phone" className="flex items-center gap-2 text-base font-semibold mb-2">
@@ -203,89 +163,105 @@ const MyBookings = () => {
                     />
                     <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      We'll send a one-time password to verify it's you
+                      Enter your password to access your bookings
                     </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="password" className="flex items-center gap-2 text-base font-semibold mb-2">
+                      <Lock className="w-4 h-4" />
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      maxLength={32}
+                      className="h-14 text-base"
+                      required
+                    />
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full h-12 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600"
-                    disabled={requestingOtp}
+                    disabled={loggingIn}
                   >
-                    {requestingOtp ? (
+                    {loggingIn ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Sending OTP...
+                        Logging in...
                       </>
                     ) : (
                       <>
                         <ShieldCheck className="w-5 h-5 mr-2" />
-                        Send OTP
+                        Login
                       </>
                     )}
                   </Button>
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleVerifyOtp}>
-                <div className="space-y-4">
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Change number ({phoneNumber})
-                  </button>
-                  <div>
-                    <Label htmlFor="otp" className="flex items-center gap-2 text-base font-semibold mb-2">
-                      <ShieldCheck className="w-4 h-4" />
-                      Enter OTP
-                    </Label>
-                    <Input
-                      id="otp"
-                      type="text"
-                      inputMode="numeric"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="6-digit OTP"
-                      maxLength={6}
-                      className="h-14 text-base text-center tracking-[0.5em] font-mono"
-                      autoFocus
-                      required
-                    />
-                    <p className="text-xs text-slate-500 mt-2">
-                      OTP sent to +91 {phoneNumber}
-                    </p>
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600"
-                    disabled={verifyingOtp}
-                  >
-                    {verifyingOtp ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="w-5 h-5 mr-2" />
-                        View My Bookings
-                      </>
-                    )}
-                  </Button>
-                  <div className="text-center">
-                    <button
-                      type="button"
-                      onClick={handleRequestOtp}
-                      disabled={requestingOtp || cooldown > 0}
-                      className="text-sm text-blue-600 hover:text-blue-700 disabled:text-slate-400"
-                    >
-                      {cooldown > 0 ? `Resend OTP in ${cooldown}s` : "Resend OTP"}
-                    </button>
-                  </div>
-                </div>
-              </form>
+              <>
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">
+                  Your Bookings ({bookings.length})
+                </h2>
+                {bookings.map((booking) => (
+                  <Card key={booking._id} className="shadow-lg">
+                    <CardContent className="pt-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold">{booking.passengerName}</h3>
+                          <p className="text-sm text-slate-500">
+                            Booking ID: {booking._id.substring(0, 8).toUpperCase()}
+                          </p>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-sm font-semibold ">
+                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-slate-500">Porter</p>
+                          <p className="font-semibold">{booking.porterName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Station</p>
+                          <p className="font-semibold">{booking.station}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Train</p>
+                          <p className="font-semibold">{booking.trainNo} - {booking.trainName}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Date</p>
+                          <p className="font-semibold">{booking.dateOfJourney}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Luggage</p>
+                          <p className="font-semibold">{booking.numberOfBags} bags, {booking.weight} kg</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-500">Total Price</p>
+                          <p className="font-semibold text-green-600">₹{booking.totalPrice}</p>
+                        </div>
+                      </div>
+
+                      {booking.notes && (
+                        <div className="bg-slate-50 p-3 rounded-lg">
+                          <p className="text-xs text-slate-500 mb-1">Notes:</p>
+                          <p className="text-sm">{booking.notes}</p>
+                        </div>
+                      )}
+
+                      <div className="mt-4 pt-4 border-t text-xs text-slate-500">
+                        Booked on: {new Date(booking.createdAt).toLocaleString()}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
             )}
           </CardContent>
         </Card>
