@@ -62,7 +62,7 @@ const MyBookings = () => {
     setLoggingIn(true);
 
     try {
-      const response = await fetch(`${API_BASE}/api/porter/login`, {
+      const response = await fetch(`${API_BASE}/api/customer/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: phoneNumber, password })
@@ -74,41 +74,19 @@ const MyBookings = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Store authentication data in localStorage (matching PorterDashboard expectations)
-      localStorage.setItem('porterToken', data.data.token);
-      localStorage.setItem('porterId', data.data.id);
-      localStorage.setItem('porterBadgeNumber', data.data.badgeNumber);
-      localStorage.setItem('porterName', data.data.name);
-
-      // Also store full porter data for easy access
-      localStorage.setItem('porterData', JSON.stringify({
-        token: data.data.token,
-        id: data.data.id,
-        phone: data.data.phone,
-        badgeNumber: data.data.badgeNumber,
-        name: data.data.name,
-        station: data.data.station,
-        image: data.data.image,
-        rating: data.data.rating,
-        totalTrips: data.data.totalTrips,
-        experience: data.data.experience || '1 year',
-        specialization: data.data.specialization || 'General Luggage',
-        languages: data.data.languages || ['English', 'Hindi'],
-        isOnline: data.data.isOnline
-      }));
-
-      setStep("phone");
-      setPhoneNumber("");
-      setPassword("");
+      // Store authentication data in localStorage
+      localStorage.setItem('customerToken', data.data.token);
+      localStorage.setItem('customerId', data.data.id);
+      localStorage.setItem('customerPhone', data.data.phone);
 
       toast({
         title: "Login Successful",
-        description: `Welcome back, ${data.data.name}! You are now online.`,
+        description: `Welcome back! You are now authenticated.`,
         variant: "success",
       });
 
       setTimeout(() => {
-        navigate("/porter-dashboard");
+        navigate("/customer-dashboard");
       }, 1000);
     } catch (error) {
       console.error('Error logging in:', error);

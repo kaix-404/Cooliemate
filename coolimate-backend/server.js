@@ -449,7 +449,25 @@ porterSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 const Porter = mongoose.model('Porter', porterSchema);
-const Booking = mongoose.model('Booking', bookingSchema);
+
+// Customer Schema
+const customerSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  phone: { type: String, required: true, unique: true, match: /^[0-9]{10}$/ },
+  password: { type: String, required: true, minlength: 6 },
+  image: { type: String, default: '' },
+  isVerified: { type: Boolean, default: true },
+  registeredAt: { type: Date, default: Date.now }
+});
+
+customerSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+const Customer = mongoose.model('Customer', customerSchema);
+
+// Booking Schema
+const bookingSchema = new mongoose.Schema({
 const Review = mongoose.model('Review', reviewSchema);
 const Analytics = mongoose.model('Analytics', analyticsSchema);
 
@@ -1159,6 +1177,68 @@ app.post('/api/porter/login', async (req, res) => {
         experience: porter.experience,
         languages: porter.languages,
         specialization: porter.specialization,
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Login Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during login',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/customer/login', async (req, res) => {
+  try {
+    const { phone, password } = req.body;
+
+    if (!phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone and password are required'
+      });
+    }
+
+    if (!/^[0-9]{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 10-digit mobile number'
+      });
+    }
+
+    const customer = await Customer.findOne({ phone });
+    if (!customer) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials - customer not registered'
+      });
+    }
+
+    const isMatch = await customer.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const token = jwt.sign(
+      { id: customer._id, phone: customer.phone },
+      jwtSecret,
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ Login successful - Customer ${customer.name} is now authenticated`);
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        id: customer._id,
+        phone: customer.phone,
         token
       }
     });
