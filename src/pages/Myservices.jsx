@@ -12,6 +12,8 @@ const API_BASE = 'https://cooliemate-v2.onrender.com';
 const MyBookings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const cooldownRef = useRef(null);
+  const setCooldown = (v) => { /* no-op, kept for compatibility with old startCooldown references */ };
   const [step, setStep] = useState("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
