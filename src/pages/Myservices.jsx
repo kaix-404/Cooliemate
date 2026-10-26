@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Phone, Search, Package, Loader2, ShieldCheck, ArrowLeft, Lock } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { useNavigate } from "react-router-dom";
 const API_BASE = 'https://cooliemate-v2.onrender.com';
 
 const MyBookings = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [step, setStep] = useState("phone");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
@@ -88,7 +90,7 @@ const MyBookings = () => {
       });
 
       setTimeout(() => {
-        navigate("/customer-dashboard");
+        navigate("/bookPorter");
       }, 1000);
     } catch (error) {
       console.error('Error logging in:', error);
@@ -101,6 +103,7 @@ const MyBookings = () => {
       setLoggingIn(false);
     }
   };
+
   const handleRegister = async (e) => {
     e?.preventDefault();
 
@@ -146,24 +149,21 @@ const MyBookings = () => {
         throw new Error(data.message || "Registration failed");
       }
 
-      // Store authentication data in localStorage
+      // Store authentication data in localStorage directly after registration
       localStorage.setItem("customerToken", data.data.token);
       localStorage.setItem("customerId", data.data.id);
       localStorage.setItem("customerPhone", data.data.phone);
 
       toast({
         title: "Registration Successful",
-        description: "Welcome! You are now registered.",
+        description: "Welcome! You are now registered and logged in.",
         variant: "success",
       });
 
+      // Redirect to Book Porter immediately after successful registration
       setTimeout(() => {
-        setShowRegister(false);
-        setStep("phone");
-        setPhoneNumber("");
-        setPassword("");
-        setName("");
-      }, 1000);
+        navigate("/bookPorter");
+      }, 800);
     } catch (error) {
       console.error("Error registering:", error);
       toast({
@@ -371,7 +371,7 @@ const MyBookings = () => {
                         </div>
                         <div>
                           <p className="text-sm text-slate-500">Total Price</p>
-                          <p className="font-semibold text-green-600">₹{booking.totalPrice}</p>
+                          <p className="font-semibold text-green-600">&#x20B9;{booking.totalPrice}</p>
                         </div>
                       </div>
 
@@ -449,7 +449,7 @@ const MyBookings = () => {
                         </div>
                         <div>
                           <p className="text-sm text-slate-500">Total Price</p>
-                          <p className="font-semibold text-green-600">₹{booking.totalPrice}</p>
+                          <p className="font-semibold text-green-600">&#x20B9;{booking.totalPrice}</p>
                         </div>
                       </div>
 
