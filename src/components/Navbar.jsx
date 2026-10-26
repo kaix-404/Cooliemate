@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Home, Package, LogIn, Info, ShoppingBag, Mail, Linkedin, Phone, MapPin, Menu, X } from "lucide-react";
+import { Home, Package, LogIn, Info, ShoppingBag, LogOut, User, Mail, Linkedin, Phone, MapPin, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,8 +8,20 @@ import { motion, AnimatePresence } from "framer-motion";
 const Navbar = () => {
   const [userType, setUserType] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('customerToken') || localStorage.getItem('porterToken');
+    if (token) {
+      setIsAuthenticated(true);
+      const customerName = localStorage.getItem('customerName');
+      const porterName = localStorage.getItem('porterName');
+      setUserName(customerName || porterName || '');
+    }
+  }, []);
   const location = useLocation();
 
   useEffect(() => {
@@ -36,13 +48,27 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('customerToken');
+    localStorage.removeItem('porterToken');
+    localStorage.removeItem('customerId');
+    localStorage.removeItem('porterId');
+    localStorage.removeItem('customerPhone');
+    localStorage.removeItem('porterPhone');
+    localStorage.removeItem('customerName');
+    localStorage.removeItem('porterName');
+    setIsAuthenticated(false);
+    setUserName('');
+    window.location.href = '/';
+  };
+
   const navLinks = [
     { name: "Home", path: "/", icon: Home },
     { name: "Book Porter", path: "/book", icon: Package },
     { name: "Porter Login", path: "/porter-login", icon: LogIn },
-    { name: "Services", path: "/myorders", icon: ShoppingBag },
+    { name: "Account", path: "/myorders", icon: User },
     { name: "About Us", path: "/about", icon: Info },
-    
+    { name: "Logout", path: "", icon: LogOut, onClick: handleLogout, isLogout: true },
   ];
 
   return (
@@ -79,7 +105,28 @@ const Navbar = () => {
             {/* Navigation Links */}
             <div className="flex items-center space-x-1 lg:space-x-2 flex-wrap justify-end flex-1">
               {navLinks.map((link, index) => {
-                const isActive = location.pathname === link.path;
+                const isActive = link.isLogout ? false : location.pathname === link.path;
+                if (link.isLogout) {
+                  return (
+                    <motion.div
+                      key={link.name}
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`font-semibold transition-all duration-300 text-xs lg:text-sm px-2 lg:px-4 whitespace-nowrap hover:bg-red-50 hover:text-red-600 ${isAuthenticated ? 'text-red-600' : 'text-gray-400'}`}
+                        onClick={link.onClick}
+                        disabled={!isAuthenticated}
+                      >
+                        <LogOut className="w-3 h-3 inline mr-1" />
+                        {isAuthenticated ? 'Logout' : 'Login'}
+                      </Button>
+                    </motion.div>
+                  );
+                }
                 return (
                   <motion.div
                     key={link.path}
