@@ -32,7 +32,7 @@ const BookPorter = () => {
     const porterToken = localStorage.getItem('porterToken');
     
     if (!customerToken && !porterToken) {
-      navigate('/login', { replace: true });
+      navigate('/myorders', { replace: true });
     }
   }, []);
   
