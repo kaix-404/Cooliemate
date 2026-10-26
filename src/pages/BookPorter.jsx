@@ -127,8 +127,8 @@ const BookPorter = () => {
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: "",
-    phone: "",
+    fullName: localStorage.getItem('customerName') || "",
+    phone: localStorage.getItem('customerPhone') || "",
     pnr: "",
     trainNumber: "",
     station: "Kurnool Station",
