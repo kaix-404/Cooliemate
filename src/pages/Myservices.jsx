@@ -84,6 +84,7 @@ const MyBookings = () => {
       localStorage.setItem('customerToken', data.data.token);
       localStorage.setItem('customerId', data.data.id);
       localStorage.setItem('customerPhone', data.data.phone);
+      if (data.data.name) localStorage.setItem('customerName', data.data.name);
 
       toast({
         title: "Login Successful",
@@ -155,6 +156,7 @@ const MyBookings = () => {
       localStorage.setItem("customerToken", data.data.token);
       localStorage.setItem("customerId", data.data.id);
       localStorage.setItem("customerPhone", data.data.phone);
+      if (data.data.name) localStorage.setItem("customerName", data.data.name);
 
       toast({
         title: "Registration Successful",

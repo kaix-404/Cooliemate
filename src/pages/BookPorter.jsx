@@ -127,7 +127,21 @@ const BookPorter = () => {
 
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fullName: localStorage.getItem('customerName') || "",
+    fullName: (() => {
+      const stored = localStorage.getItem('customerName');
+      if (stored) return stored;
+      const phone = localStorage.getItem('customerPhone');
+      if (!phone) return '';
+      try {
+        const token = localStorage.getItem('customerToken');
+        if (!token) return '';
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        if (decoded?.sub) {
+          return decoded.sub;
+        }
+      } catch { /* ignore */ }
+      return '';
+    })(),
     phone: localStorage.getItem('customerPhone') || "",
     pnr: "",
     trainNumber: "",

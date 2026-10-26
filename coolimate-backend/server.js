@@ -1233,13 +1233,14 @@ app.post('/api/customer/login', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Login successful',
-      data: {
+      message: 'Login successful',      data: {
         id: customer._id,
         phone: customer.phone,
+        name: customer.name,
         token
       }
     });
+
 
   } catch (error) {
     console.error('❌ Login Error:', error);
@@ -1300,6 +1301,7 @@ app.post('/api/customer/register', async (req, res) => {
       data: {
         id: customer._id,
         phone: customer.phone,
+        name: customer.name,
         token
       }
     });
