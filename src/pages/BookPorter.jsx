@@ -26,6 +26,16 @@ const isKurnoolStation = (station) => {
 const BookPorter = () => {
   const navigate = useNavigate();
   
+  // Check authentication - redirect to login if not authenticated
+  useEffect(() => {
+    const customerToken = localStorage.getItem('customerToken');
+    const porterToken = localStorage.getItem('porterToken');
+    
+    if (!customerToken && !porterToken) {
+      navigate('/login', { replace: true });
+    }
+  }, []);
+  
   // Enhanced Sound notification function with working audio for each action
   const playSound = (type) => {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
