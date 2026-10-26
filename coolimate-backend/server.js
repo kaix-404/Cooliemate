@@ -1251,6 +1251,69 @@ app.post('/api/customer/login', async (req, res) => {
   }
 });
 
+app.post('/api/customer/register', async (req, res) => {
+  try {
+    const { name, phone, password } = req.body;
+
+    if (!name || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, phone and password are required'
+      });
+    }
+
+    if (!/^[0-9]{10}$/.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 10-digit mobile number'
+      });
+    }
+
+    const existingCustomer = await Customer.findOne({ phone });
+    if (existingCustomer) {
+      return res.status(409).json({
+        success: false,
+        message: 'Customer already registered with this phone number'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const customer = await Customer.create({
+      name,
+      phone,
+      password: hashedPassword,
+      isVerified: true
+    });
+
+    const token = jwt.sign(
+      { id: customer._id, phone: customer.phone },
+      jwtSecret,
+      { expiresIn: '7d' }
+    );
+
+    console.log(`✅ Registration successful - Customer ${customer.name} is now registered`);
+
+    res.json({
+      success: true,
+      message: 'Registration successful',
+      data: {
+        id: customer._id,
+        phone: customer.phone,
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Registration Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during registration',
+      error: error.message
+    });
+  }
+});
+
 app.get('/api/porter/profile', authenticateToken, async (req, res) => {
   try {
     const porter = await Porter.findById(req.porter.id).select('-password');
